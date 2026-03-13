@@ -30,6 +30,17 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from urllib.parse import parse_qs, urlparse
 
+def get_ffmpeg_path():
+    """Get absolute path to bundled ffmpeg based on the operating system."""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    
+    # Windows uses .exe, Mac/Linux do not
+    ffmpeg_name = "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"
+    return os.path.join(base_path, ffmpeg_name)
 
 # ---------------------------------------------------------------------------
 # Auto-install yt-dlp if missing
@@ -318,6 +329,7 @@ class App(tk.Tk):
             "no_warnings": True,
             "progress_hooks": [self._progress_hook],
             "postprocessors": postprocessors,
+            "ffmpeg_location": get_ffmpeg_path(),  # <--- ADD THIS LINE
         }
 
         try:
