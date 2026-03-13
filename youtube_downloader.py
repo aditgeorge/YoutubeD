@@ -26,9 +26,43 @@ import os
 import re
 import sys
 import threading
+import importlib
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from urllib.parse import parse_qs, urlparse
+
+
+def _configure_ssl_certificates():
+    """Point Python/yt-dlp to certifi CA bundle when available."""
+    certifi = _ensure_certifi()
+    if certifi is None:
+        return None
+
+    ca_bundle = certifi.where()
+    if ca_bundle and os.path.exists(ca_bundle):
+        # Helps OpenSSL/urllib find trusted root certificates, especially in
+        # some macOS and PyInstaller environments.
+        os.environ.setdefault("SSL_CERT_FILE", ca_bundle)
+        os.environ.setdefault("REQUESTS_CA_BUNDLE", ca_bundle)
+        return ca_bundle
+
+    return None
+
+
+def _ensure_certifi():
+    try:
+        return importlib.import_module("certifi")
+    except ImportError:
+        if getattr(sys, "frozen", False):
+            # Frozen apps should bundle certifi at build time.
+            return None
+
+        import subprocess
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "--quiet", "certifi"],
+            stdout=subprocess.DEVNULL,
+        )
+        return importlib.import_module("certifi")
 
 def get_ffmpeg_path():
     """Get absolute path to bundled ffmpeg based on the operating system."""
@@ -61,6 +95,7 @@ def _ensure_ytdlp():
 
 
 yt_dlp = _ensure_ytdlp()
+CA_BUNDLE_PATH = _configure_ssl_certificates()
 
 
 # ---------------------------------------------------------------------------
@@ -279,6 +314,8 @@ class App(tk.Tk):
         self._video_info = None
         self._title_lbl.config(text="—")
         self._meta_lbl.config(text="")
+        if "certificate verify failed" in msg.lower():
+            msg += " | TLS certificate check failed. Make sure certifi is installed and app is rebuilt."
         short = msg[:120] + "…" if len(msg) > 120 else msg
         self._set_url_status(f"Could not retrieve video: {short}", "red")
         self._dl_btn.config(state="disabled")

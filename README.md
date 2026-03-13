@@ -110,3 +110,15 @@ pyinstaller --noconfirm --onefile --windowed --add-binary "ffmpeg:." --name "You
 
 
 Would you like me to show you how to add a custom `.ico` (Windows) and `.icns` (Mac) file to your PyInstaller commands so your app has a professional icon instead of the default generic one?
+
+---
+
+### macOS certificate error fix (YouTube validation)
+
+If your friend sees an SSL/TLS error like `certificate verify failed` when validating a video:
+
+1. Install project dependencies from `requirements.txt` (this includes `certifi`).
+2. Rebuild the Mac app on macOS (PyInstaller cannot cross-compile from Windows).
+3. If running from a local Python install (not bundled app), run Python's `Install Certificates.command` once.
+
+The app now sets `SSL_CERT_FILE`/`REQUESTS_CA_BUNDLE` to `certifi` automatically when available, which fixes most macOS CA trust issues.
